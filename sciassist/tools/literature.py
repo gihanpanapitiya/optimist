@@ -23,6 +23,7 @@ from langchain_core.tools import tool
 from pydantic import Field
 
 from ..config import get_settings
+from .files import to_agent_path
 
 logger = logging.getLogger(__name__)
 
@@ -191,8 +192,8 @@ async def deep_literature_research(
             f"contradictions: {summary['contradictions']}",
             f"- iterations: {summary['iterations']}, mean subquestion coverage: "
             f"{summary['mean_coverage']:.2f}, stopped because: {summary['terminated_because']}",
-            f"- corpus: {summary['corpus_root']}",
-            f"- full report: {summary['report_path']}",
+            f"- corpus: {to_agent_path(summary['corpus_root'])}",
+            f"- full report: {to_agent_path(summary['report_path'])}",
             "- also in the corpus: research_plan.md, evidence/claims.md, "
             "evidence/contradictions.md, subtopics/, titles.md",
             "",

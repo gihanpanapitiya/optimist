@@ -8,6 +8,7 @@ agent around it.
     SCIASSIST_SUBAGENT_MODEL   model for spawned subagents (default: main model)
     SCIASSIST_WORKSPACE        where research artifacts are written and read
     SCIASSIST_DB               SQLite file holding chat history (checkpoints)
+    SCIASSIST_AUTO_APPROVE     "1" runs shell commands and deletions without asking
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ class Settings:
     subagent_model: str
     workspace: Path
     db_path: Path
+    auto_approve: bool
 
     @property
     def literature_dir(self) -> Path:
@@ -55,4 +57,5 @@ def get_settings() -> Settings:
         subagent_model=os.environ.get("SCIASSIST_SUBAGENT_MODEL", model),
         workspace=workspace.resolve(),
         db_path=db_path.resolve(),
+        auto_approve=os.environ.get("SCIASSIST_AUTO_APPROVE", "").lower() in {"1", "true", "yes"},
     )

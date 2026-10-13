@@ -344,3 +344,35 @@ a.file-link { color: var(--accent-2); cursor: pointer; font-family: var(--mono);
   .viewer { height: 70vh; border-top: 1px solid var(--border); }
   .brand-name, #new-chat span { display: none; }
 }
+
+/* approval of shell commands and deletions */
+.approval {
+  border: 1px solid var(--accent-2); background: var(--bg-elev);
+  border-radius: 10px; margin: 10px 0; padding: 12px; animation: rise .25s ease;
+}
+.approval .atitle { font-size: 13px; font-weight: 600; color: var(--accent-2); margin-bottom: 8px; }
+.approval .action { margin-bottom: 8px; }
+.approval .tname { font: 500 12.5px var(--mono); color: var(--text-dim); }
+.approval pre {
+  margin: 4px 0 0; padding: 8px 10px; background: var(--code-bg); border-radius: 8px;
+  font: 12.5px var(--mono); white-space: pre-wrap; word-break: break-word;
+}
+.approval .reason {
+  width: 100%; box-sizing: border-box; margin: 4px 0 10px; padding: 7px 10px;
+  background: var(--bg-elev-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; font: inherit; font-size: 13px;
+}
+.approval .abuttons { display: flex; gap: 8px; }
+.approval button {
+  padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border-strong);
+  background: var(--bg-elev-2); font-size: 13px;
+}
+.approval button.approve { border-color: var(--ok); color: var(--ok); }
+.approval button.reject { border-color: var(--danger); color: var(--danger); }
+.approval button:disabled { opacity: .5; cursor: default; }
+.approval.approved { border-color: var(--ok); }
+.approval.approved .atitle { color: var(--ok); }
+.approval.rejected { border-color: var(--danger); }
+.approval.rejected .atitle { color: var(--danger); }
+.approval.approved .reason, .approval.approved .abuttons,
+.approval.rejected .reason, .approval.rejected .abuttons { display: none; }

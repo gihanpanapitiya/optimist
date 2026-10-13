@@ -10,7 +10,12 @@ per event:
     {"type": "tool_call", "id", "name", "args"}
     {"type": "progress", "tool", "message"}            custom events from tools
     {"type": "tool_result", "id", "name", "content", "status"}
+    {"type": "approval", "interrupts": [{"id", "actions": [{"name", "args"}]}]}
     {"type": "error", "message"} / {"type": "done"}
+
+An ``approval`` event ends the run with tool calls waiting on the user (shell
+commands and deletions, see ``agent.APPROVAL_REQUIRED``). The client answers by
+posting to ``/api/chat`` again with ``decisions`` instead of a message.
 
 Only the main agent's tokens are streamed. Subagents run inside the ``task``
 tool, so their LLM calls show up in the token stream too; they are filtered
@@ -25,11 +30,13 @@ import mimetypes
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
+from langgraph.types import Command
 from pydantic import BaseModel
 
 from .agent import persistent_assistant
@@ -82,15 +89,32 @@ app = FastAPI(title="sciassist", lifespan=lifespan)
 # --------------------------------------------------------------------------
 
 
+class Decision(BaseModel):
+    type: Literal["approve", "reject"]
+    message: str | None = None
+
+
 class ChatRequest(BaseModel):
     thread_id: str
-    message: str
+    message: str = ""
+    decisions: dict[str, list[Decision]] | None = None
+    """Answers to pending approvals: interrupt id -> one decision per action."""
 
 
 @app.post("/api/chat")
 async def chat(req: ChatRequest) -> StreamingResponse:
+    if req.decisions is not None:
+        resume = {
+            interrupt_id: {"decisions": [d.model_dump(exclude_none=True) for d in decisions]}
+            for interrupt_id, decisions in req.decisions.items()
+        }
+        graph_input = Command(resume=resume)
+    elif req.message.strip():
+        graph_input = {"messages": [HumanMessage(req.message)]}
+    else:
+        raise HTTPException(400, "send a message or decisions")
     return StreamingResponse(
-        _sse(_run(req.thread_id, req.message)),
+        _sse(_run(req.thread_id, graph_input, req.message)),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -101,7 +125,7 @@ async def _sse(events: AsyncIterator[dict]) -> AsyncIterator[str]:
         yield f"data: {json.dumps(event, default=str)}\n\n"
 
 
-async def _run(thread_id: str, message: str) -> AsyncIterator[dict]:
+async def _run(thread_id: str, graph_input, message: str) -> AsyncIterator[dict]:
     if thread_id in _active_threads:
         yield {"type": "error", "message": "This conversation is still running. "
                                            "Stop it or wait for it to finish."}
@@ -113,7 +137,7 @@ async def _run(thread_id: str, message: str) -> AsyncIterator[dict]:
     yield {"type": "thread", "id": thread_id}
     try:
         async for mode, chunk in _graph.astream(
-            {"messages": [HumanMessage(message)]},
+            graph_input,
             config=config,
             stream_mode=["messages", "updates", "custom"],
         ):
@@ -121,7 +145,7 @@ async def _run(thread_id: str, message: str) -> AsyncIterator[dict]:
                 msg, meta = chunk
                 if (
                     isinstance(msg, AIMessageChunk)
-                    and meta.get("langgraph_node") == "agent"
+                    and meta.get("langgraph_node") == "model"
                     and _is_main_agent(meta)
                     and msg.text
                 ):
@@ -129,10 +153,12 @@ async def _run(thread_id: str, message: str) -> AsyncIterator[dict]:
             elif mode == "custom":
                 yield {"type": "progress", **chunk}
             elif mode == "updates":
-                for update in chunk.values():
-                    for msg in (update or {}).get("messages", []):
-                        for event in _message_events(msg):
-                            yield event
+                if "__interrupt__" in chunk:
+                    yield _approval_event(chunk["__interrupt__"])
+                    continue
+                for node, update in chunk.items():
+                    for event in _update_events(node, update):
+                        yield event
     except Exception as exc:  # noqa: BLE001 - report to the client, keep the server up
         logger.exception("chat run failed")
         yield {"type": "error", "message": f"{type(exc).__name__}: {exc}"}
@@ -145,8 +171,38 @@ async def _run(thread_id: str, message: str) -> AsyncIterator[dict]:
 
 def _is_main_agent(meta: dict) -> bool:
     # A subagent's namespace is nested under the parent's tools node,
-    # e.g. "tools:<id>|agent:<id>".
+    # e.g. "tools:<id>|model:<id>".
     return "|" not in (meta.get("langgraph_checkpoint_ns") or "")
+
+
+def _update_events(node: str, update: dict | None) -> list[dict]:
+    """Events for one node's state update.
+
+    Middleware nodes also write messages. The approval node re-emits the
+    model's message on resume, so only its tool results (rejections) count.
+    """
+    messages = (update or {}).get("messages", [])
+    if node in {"model", "tools"}:
+        return [e for m in messages for e in _message_events(m)]
+    if node == "HumanInTheLoopMiddleware.after_model":
+        return [e for m in messages if isinstance(m, ToolMessage) for e in _message_events(m)]
+    return []
+
+
+def _approval_event(interrupts) -> dict:
+    return {
+        "type": "approval",
+        "interrupts": [
+            {
+                "id": i.id,
+                "actions": [
+                    {"name": a["name"], "args": a["args"]}
+                    for a in (i.value or {}).get("action_requests", [])
+                ],
+            }
+            for i in interrupts
+        ],
+    }
 
 
 def _message_events(msg) -> list[dict]:
@@ -180,6 +236,8 @@ async def history(thread_id: str) -> list[dict]:
             out.append({"type": "user", "text": msg.text})
         else:
             out.extend(_message_events(msg))
+    if state.interrupts and thread_id not in _active_threads:
+        out.append(_approval_event(state.interrupts))
     return out
 
 

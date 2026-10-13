@@ -20,6 +20,7 @@ const state = {
   selected: null,
   viewerMode: "rendered",
   pollTimer: null,
+  pendingApproval: null,     // the unanswered approval card, if any
 };
 store.set("threadId", state.threadId);
 
@@ -78,7 +79,8 @@ function linkifyPaths(root) {
   // Inline code naming a workspace file, e.g. `literature/x/final_report.md`.
   root.querySelectorAll("code").forEach((code) => {
     if (code.closest("pre, a")) return;
-    const rel = code.textContent.trim().replace(/^\.\//, "");
+    // The agent writes workspace paths as "/literature/...": the workspace is its root.
+    const rel = code.textContent.trim().replace(/^\.?\//, "");
     if (state.files.has(rel)) code.replaceWith(fileLink(rel, rel));
   });
 }
@@ -161,9 +163,15 @@ function onMessage(text) {
 const TOOL_LABELS = {
   search_literature: (a) => a.query,
   deep_literature_research: (a) => a.question,
-  task: (a) => a.description,
-  read_file: (a) => a.path,
-  list_files: (a) => a.path || ".",
+  task: (a) => `${a.subagent_type || ""}: ${a.description}`,
+  ls: (a) => a.path || "/",
+  read_file: (a) => a.file_path,
+  write_file: (a) => a.file_path,
+  edit_file: (a) => a.file_path,
+  delete: (a) => a.file_path,
+  glob: (a) => a.pattern,
+  grep: (a) => a.pattern,
+  execute: (a) => a.command,
 };
 
 function onToolCall({ id, name, args }) {
@@ -237,15 +245,65 @@ function dispatch(event) {
     case "tool_call": return onToolCall(event);
     case "progress": return onProgress(event);
     case "tool_result": return onToolResult(event);
+    case "approval": return onApproval(event);
     case "error": return onError(event.message);
   }
+}
+
+/* Tool calls waiting for the user (shell commands, deletions). The run has
+   ended; answering posts the decisions and resumes it. */
+function onApproval({ interrupts }) {
+  finishTurn({ pending: true });
+  const el = document.createElement("div");
+  el.className = "approval";
+  el.innerHTML = `<div class="atitle">Approval needed</div><div class="actions"></div>
+    <input class="reason" type="text" placeholder="Reason, if rejecting (optional)">
+    <div class="abuttons"><button class="approve">Approve</button><button class="reject">Reject</button></div>`;
+  const list = el.querySelector(".actions");
+  for (const i of interrupts) {
+    for (const a of i.actions) {
+      const row = document.createElement("div");
+      row.className = "action";
+      row.innerHTML = `<span class="tname"></span><pre></pre>`;
+      row.querySelector(".tname").textContent = a.name;
+      row.querySelector("pre").textContent = (TOOL_LABELS[a.name] || ((x) => JSON.stringify(x, null, 2)))(a.args || {});
+      list.append(row);
+    }
+  }
+  const answer = (type) => {
+    const message = el.querySelector(".reason").value.trim();
+    const decision = type === "reject" && message ? { type, message } : { type };
+    const decisions = Object.fromEntries(interrupts.map((i) => [i.id, i.actions.map(() => decision)]));
+    el.querySelectorAll("button, input").forEach((b) => { b.disabled = true; });
+    el.classList.add(type === "approve" ? "approved" : "rejected");
+    el.querySelector(".atitle").textContent = type === "approve" ? "Approved" : "Rejected";
+    state.pendingApproval = null;
+    resume(decisions);
+  };
+  el.querySelector(".approve").addEventListener("click", () => answer("approve"));
+  el.querySelector(".reject").addEventListener("click", () => answer("reject"));
+  messagesEl.append(el);
+  state.pendingApproval = el;
+  scrollToBottom(true);
 }
 
 /* A run keeps going on the server when you switch chats. `stream.live` says
    whether its events still belong on screen; once you leave, they don't. */
 async function send(text) {
   if (state.stream || !text.trim()) return;
+  // A new message instead of an answer drops the pending tool calls.
+  state.pendingApproval?.remove();
+  state.pendingApproval = null;
   addUser(text);
+  await runStream({ thread_id: state.threadId, message: text });
+}
+
+function resume(decisions) {
+  return runStream({ thread_id: state.threadId, decisions });
+}
+
+async function runStream(body) {
+  if (state.stream) return;
   const stream = { threadId: state.threadId, abort: new AbortController(), live: true };
   state.stream = stream;
   updateComposer();
@@ -256,7 +314,7 @@ async function send(text) {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thread_id: stream.threadId, message: text }),
+      body: JSON.stringify(body),
       signal: stream.abort.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -281,7 +339,7 @@ async function send(text) {
   } catch (err) {
     if (stream.live) onError(err.name === "AbortError" ? "Stopped." : String(err));
   } finally {
-    if (stream.live) finishTurn();
+    if (stream.live) finishTurn({ pending: Boolean(state.pendingApproval) });
     state.stream = null;
     stopPolling();
     updateComposer();
@@ -292,9 +350,10 @@ async function send(text) {
   }
 }
 
-function finishTurn() {
+function finishTurn({ pending = false } = {}) {
   if (turn.segment) renderSegment(true);
   turn.segment = null;
+  if (pending) return;   // cards awaiting approval stay running until answered
   for (const card of turn.cards.values()) {
     if (card.classList.contains("running")) { card.classList.remove("running"); card.classList.add("err"); }
   }
@@ -325,13 +384,14 @@ async function loadHistory() {
   try {
     const events = await (await fetch(`/api/history?thread_id=${encodeURIComponent(state.threadId)}`)).json();
     for (const e of events) dispatch(e);
-    turn.cards.forEach((card) => { if (card.classList.contains("running")) { card.classList.remove("running"); card.classList.add("ok"); } });
+    if (!state.pendingApproval) turn.cards.forEach((card) => { if (card.classList.contains("running")) { card.classList.remove("running"); card.classList.add("ok"); } });
     scrollToBottom(true);
   } catch { /* unknown thread: nothing to show */ }
 }
 
 function clearChat() {
-  messagesEl.querySelectorAll(".msg, .tool").forEach((el) => el.remove());
+  messagesEl.querySelectorAll(".msg, .tool, .approval").forEach((el) => el.remove());
+  state.pendingApproval = null;
   turn.cards.clear();
   turn.segment = null;
   turn.segmentText = "";

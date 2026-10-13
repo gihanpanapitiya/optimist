@@ -1,7 +1,8 @@
 # sciassist
 
-An AI science assistant: a tool-calling LangGraph agent with tools and
-subagents. Design notes: [`../requirement.md`](../requirement.md),
+An AI science assistant that can also write and run code: a deepagents
+agent with literature tools, file and shell tools, and subagents. Design
+notes: [`../requirement.md`](../requirement.md),
 [`../capability_taxonomy.md`](../capability_taxonomy.md).
 
 ```bash
@@ -33,18 +34,35 @@ the database: `sciassist chat --thread <id>` resumes any conversation.
 
 ## Architecture
 
+The agent is built with [deepagents](../deepagents/libs/deepagents)
+(`create_deep_agent`). deepagents supplies the loop and the harness; this
+package adds the literature tools, the prompts, the subagents and the UI.
+
 ```
 main agent (sciassist/agent.py)
 ├── search_literature          quick multi-source search (seconds)
-├── deep_literature_research   full litresearch graph (minutes) → workspace/literature/<slug>/
-├── list_files / read_file     read reports and evidence from the workspace
+├── deep_literature_research   full litresearch graph (minutes) → /literature/<slug>/
+├── ls / read_file / write_file / edit_file / delete / glob / grep    (deepagents)
+├── execute                    shell command in the workspace          (deepagents)
 └── task(description, subagent_type)   spawn a subagent; several calls in one turn run in parallel
-    └── general-purpose        search_literature, read_file, list_files
+    ├── general-purpose        search_literature + file tools + execute
+    └── coder                  file tools + execute: write, run and debug code
 ```
 
-All agents share one loop (`sciassist/graph.py`): `agent → tools → agent`
-until the model stops calling tools. `AgentState` is where the concept
-graph is meant to go.
+From deepagents the agent also gets summarization of long threads, offloading
+of large tool results to files, and repair of tool calls left dangling by a
+cancelled run.
+
+**Workspace.** The workspace is the agent's filesystem root: `/literature/x.md`
+means `workspace/literature/x.md`, and file tools reject paths outside it.
+Shell commands run with the workspace as working directory and a 300 s
+timeout. They get only `PATH`, `HOME`, `LANG` and a few similar variables, so
+API keys stay out of the shell. Running in the workspace isn't a sandbox,
+though: a command can still reach the rest of the machine as your user.
+
+**Approval.** `execute` and `delete` pause the run for approval: buttons in
+the web UI, a prompt in the terminal. A rejection can carry a reason, which
+the agent sees. Set `SCIASSIST_AUTO_APPROVE=1` to skip approval.
 
 Deep research is a **tool**, not a subagent: litresearch already has its own
 planner and critic, so another LLM loop around it would add cost but no
@@ -53,14 +71,13 @@ needs.
 
 | Module | Role |
 | --- | --- |
-| `graph.py` | Generic tool-calling loop, `AgentState` |
-| `agent.py` | Main agent assembly; `make_graph` for `langgraph.json` |
-| `subagents.py` | `SubAgent` specs (deepagents-shaped) and the `task` tool |
+| `agent.py` | `create_deep_agent` assembly, workspace backend, approval rules; `make_graph` for `langgraph.json` |
+| `subagents.py` | Subagent specs (`general-purpose`, `coder`) |
 | `tools/literature.py` | Wrappers over `litresearch` |
-| `tools/files.py` | Workspace-confined file reading |
+| `tools/files.py` | Workspace path mapping for the UI and tool output |
 | `prompts.py` | System prompts |
 | `server.py`, `static/` | Web UI |
 | `threads.py` | Conversation index for the chat list |
-| `config.py` | `SCIASSIST_MODEL`, `SCIASSIST_SUBAGENT_MODEL`, `SCIASSIST_WORKSPACE`, `SCIASSIST_DB` |
+| `config.py` | `SCIASSIST_MODEL`, `SCIASSIST_SUBAGENT_MODEL`, `SCIASSIST_WORKSPACE`, `SCIASSIST_DB`, `SCIASSIST_AUTO_APPROVE` |
 
 Deep-research budgets and models stay in `../literature/litresearch.yaml`.

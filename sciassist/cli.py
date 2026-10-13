@@ -13,6 +13,7 @@ import uuid
 
 import typer
 from langchain_core.messages import AIMessage, ToolMessage
+from langgraph.types import Command
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.markup import escape
@@ -106,17 +107,48 @@ async def _chat_loop(graph, verbose: bool, thread: str | None) -> None:
 
 
 async def _turn(graph, user: str, config: dict, verbose: bool) -> None:
-    async for mode, chunk in graph.astream(
-        {"messages": [{"role": "user", "content": user}]},
-        config=config,
-        stream_mode=["updates", "custom"],
-    ):
-        if mode == "custom":
-            console.print(f"  [dim]· {escape(str(chunk.get('message', chunk)))}[/]")
-            continue
-        for update in chunk.values():
-            for message in (update or {}).get("messages", []):
-                _render(message, verbose)
+    graph_input = {"messages": [{"role": "user", "content": user}]}
+    # Each pass runs until the agent finishes or stops for approval.
+    while graph_input is not None:
+        interrupts = None
+        async for mode, chunk in graph.astream(
+            graph_input, config=config, stream_mode=["updates", "custom"]
+        ):
+            if mode == "custom":
+                console.print(f"  [dim]· {escape(str(chunk.get('message', chunk)))}[/]")
+            elif "__interrupt__" in chunk:
+                interrupts = chunk["__interrupt__"]
+            else:
+                for node, update in chunk.items():
+                    for message in (update or {}).get("messages", []):
+                        # The approval node re-emits the model's message on resume.
+                        if node in {"model", "tools"} or isinstance(message, ToolMessage):
+                            _render(message, verbose)
+        graph_input = await _ask_approval(interrupts) if interrupts else None
+
+
+async def _ask_approval(interrupts) -> Command:
+    """Ask about each pending tool call; the answers resume the run."""
+    resume = {}
+    for interrupt in interrupts:
+        decisions = []
+        for action in interrupt.value.get("action_requests", []):
+            args = action["args"]
+            shown = args.get("command") or args.get("file_path") or args
+            console.print(f"[bold yellow]approve {action['name']}?[/] {escape(str(shown))}")
+            answer = ""
+            while not answer:  # no default: Enter alone must not run a command
+                answer = (
+                    await asyncio.to_thread(console.input, "[yellow]  [y]es / [n]o / reason> [/]")
+                ).strip()
+            if answer.lower() in {"y", "yes"}:
+                decisions.append({"type": "approve"})
+            elif answer.lower() in {"n", "no"}:
+                decisions.append({"type": "reject"})
+            else:
+                decisions.append({"type": "reject", "message": answer})
+        resume[interrupt.id] = {"decisions": decisions}
+    return Command(resume=resume)
 
 
 def _render(message, verbose: bool) -> None:

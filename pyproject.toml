@@ -1,9 +1,10 @@
 [project]
 name = "sciassist"
 version = "0.1.0"
-description = "An AI science assistant: a tool-calling LangGraph agent with tools and subagents"
+description = "An AI science assistant: a deepagents agent with literature, file and shell tools"
 requires-python = ">=3.11"
 dependencies = [
+    "deepagents",
     "litresearch",
     "langgraph>=1.0",
     "langgraph-checkpoint-sqlite>=2.0",
@@ -24,6 +25,7 @@ dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8"]
 sciassist = "sciassist.cli:app"
 
 [tool.uv.sources]
+deepagents = { path = "../deepagents/libs/deepagents", editable = true }
 litresearch = { path = "../literature", editable = true }
 
 [build-system]
