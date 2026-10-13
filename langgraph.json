@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "science_assistant": "./sciassist/agent.py:make_graph"
+  },
+  "env": ".env"
+}

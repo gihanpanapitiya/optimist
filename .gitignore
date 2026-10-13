@@ -1,0 +1,7 @@
+.env
+.venv/
+__pycache__/
+workspace/
+data/
+.langgraph_api/
+.ruff_cache/
