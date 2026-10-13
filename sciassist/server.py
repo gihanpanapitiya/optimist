@@ -132,7 +132,7 @@ async def _run(thread_id: str, graph_input, message: str) -> AsyncIterator[dict]
         yield {"type": "done"}
         return
     _active_threads.add(thread_id)
-    config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
+    config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 500}
     await _threads.touch(thread_id, message)
     yield {"type": "thread", "id": thread_id}
     try:

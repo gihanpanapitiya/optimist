@@ -8,10 +8,56 @@ notes: [`../requirement.md`](../requirement.md),
 ```bash
 uv venv .venv && uv pip install -e '.[openai,anthropic,ui,dev]'
 cp .env.example .env          # API keys are also read from ../literature/.env
-.venv/bin/sciassist chat      # terminal chat
+.venv/bin/sciassist           # terminal session
 .venv/bin/sciassist ui        # web UI at http://127.0.0.1:8000
 langgraph dev                 # LangGraph Studio, via langgraph.json
+.venv/bin/pytest              # tests (scripted model, no API calls)
 ```
+
+## Terminal
+
+Modelled on Claude Code and Codex.
+
+```bash
+sciassist                               # interactive session
+sciassist --resume last                 # continue the latest conversation
+sciassist -m anthropic:claude-opus-5-5  # pick the model
+sciassist --mode auto                   # approval mode: ask | edits | auto
+sciassist -p "fit a line to @data.csv"  # one turn, answer on stdout
+cat log.txt | sciassist -p "why did this fail?" --json
+```
+
+Text streams as the model writes it, with a spinner showing what's running.
+Tool calls print as `● tool(args)` with a short result under them. File edits
+and writes show as diffs, and subagent activity is indented under the `task`
+call that started it. Each turn ends with its token count and cost; prices
+come from `genai-prices`.
+
+| Key | |
+| --- | --- |
+| Enter | send |
+| Esc Enter, Ctrl-J, `\` Enter | new line |
+| Shift+Tab | cycle approval mode |
+| Esc, Ctrl-C | interrupt the agent; a running shell command is killed |
+| `@path` | attach a workspace file (Tab completes) |
+
+**Approval modes.** `ask` confirms every file change and shell command.
+`edits` (the default) lets edits and writes through and asks for shell
+commands and deletions. `auto` asks for nothing. At a prompt, answer `y`,
+`a` (yes, and stop asking about this tool for the session), `n`, or type what
+the agent should do instead. Headless runs can't ask, so anything that would
+need a person is rejected, with a reason the agent sees.
+
+**Commands.** `/help`, `/new`, `/resume`, `/model`, `/mode`, `/compact`
+(summarize older messages to free context), `/cost`, `/init` (write
+`/AGENTS.md`), `/verbose`, `/exit`.
+
+**Project instructions.** `AGENTS.md` at the workspace root is loaded into the
+system prompt on every turn, in the terminal and the web UI. `/init` drafts
+one.
+
+The terminal and web UI share the chat database, so a conversation started in
+one can be resumed in the other.
 
 ## Web UI
 
@@ -60,9 +106,12 @@ timeout. They get only `PATH`, `HOME`, `LANG` and a few similar variables, so
 API keys stay out of the shell. Running in the workspace isn't a sandbox,
 though: a command can still reach the rest of the machine as your user.
 
-**Approval.** `execute` and `delete` pause the run for approval: buttons in
-the web UI, a prompt in the terminal. A rejection can carry a reason, which
-the agent sees. Set `SCIASSIST_AUTO_APPROVE=1` to skip approval.
+**Approval.** In the web UI, `execute` and `delete` pause the run for
+approval. The terminal pauses on every file change too, and its approval
+mode decides which pauses need asking (see [Terminal](#terminal)). A
+rejection can carry a reason, which the agent sees.
+`SCIASSIST_AUTO_APPROVE=1` turns approval off in the web UI and starts the
+terminal in `auto` mode.
 
 Deep research is a **tool**, not a subagent: litresearch already has its own
 planner and critic, so another LLM loop around it would add cost but no
@@ -78,6 +127,8 @@ needs.
 | `prompts.py` | System prompts |
 | `server.py`, `static/` | Web UI |
 | `threads.py` | Conversation index for the chat list |
+| `shell.py` | Workspace shell that kills commands when a run is cancelled |
+| `cli/` | Terminal: `repl.py` (input, commands), `session.py` (running turns), `render.py`, `approvals.py`, `usage.py` |
 | `config.py` | `SCIASSIST_MODEL`, `SCIASSIST_SUBAGENT_MODEL`, `SCIASSIST_WORKSPACE`, `SCIASSIST_DB`, `SCIASSIST_AUTO_APPROVE` |
 
 Deep-research budgets and models stay in `../literature/litresearch.yaml`.

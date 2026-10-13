@@ -11,6 +11,8 @@ dependencies = [
     "langchain>=1.0",
     "langchain-core>=1.0",
     "python-dotenv>=1.0",
+    "genai-prices>=0.1",
+    "prompt-toolkit>=3.0",
     "rich>=13.9",
     "typer>=0.15",
 ]
@@ -19,7 +21,7 @@ dependencies = [
 anthropic = ["langchain-anthropic>=1.0", "litresearch[anthropic]"]
 openai = ["langchain-openai>=1.0", "litresearch[openai]"]
 ui = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
-dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8"]
+dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8", "pexpect>=4.9"]
 
 [project.scripts]
 sciassist = "sciassist.cli:app"
