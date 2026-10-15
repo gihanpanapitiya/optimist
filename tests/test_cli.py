@@ -9,9 +9,9 @@ import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
-from sciassist.cli import app
-from sciassist.cli.approvals import Approvals
-from sciassist.cli.render import Renderer
+from forest.cli import app
+from forest.cli.approvals import Approvals
+from forest.cli.render import Renderer
 
 from .conftest import ai, tool_call
 
@@ -22,10 +22,10 @@ def _console() -> tuple[Console, io.StringIO]:
 
 
 async def _session(mode: str = "edits"):
-    from sciassist.agent import open_checkpointer
-    from sciassist.cli.session import Session
-    from sciassist.config import get_settings
-    from sciassist.threads import ThreadStore
+    from forest.agent import open_checkpointer
+    from forest.cli.session import Session
+    from forest.config import get_settings
+    from forest.threads import ThreadStore
 
     console, out = _console()
     saver_cm = open_checkpointer()
@@ -217,7 +217,7 @@ def test_bad_mode_is_rejected():
 
 
 def test_file_mentions_are_attached(isolated):
-    from sciassist.cli.repl import Repl
+    from forest.cli.repl import Repl
 
     (isolated / "notes.md").write_text("hypothesis: H1\n")
     console, out = _console()

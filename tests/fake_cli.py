@@ -11,8 +11,8 @@ import sys
 
 from langchain_core.messages import AIMessage
 
-import sciassist.cli.session as session_mod
-from sciassist.cli import app
+import forest.cli.session as session_mod
+from forest.cli import app
 from tests.conftest import ScriptedModel, ai, tool_call
 
 
@@ -41,7 +41,7 @@ def main() -> None:
         return real_build(model=model_cls(messages=replies), subagents=subagents, **kwargs)
 
     session_mod.build_assistant = build
-    sys.argv = ["sciassist", *sys.argv[1:]]
+    sys.argv = ["forest", *sys.argv[1:]]
     app()
 
 

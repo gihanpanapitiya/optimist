@@ -1,6 +1,6 @@
 """One terminal session: the agent, the current thread, and running a turn.
 
-Shared by the interactive REPL and headless ``sciassist -p``. A turn streams
+Shared by the interactive REPL and headless ``forest -p``. A turn streams
 until the agent finishes or pauses for approval; approvals are answered (by
 the mode, or by asking) and the run resumes, until the agent is done.
 """

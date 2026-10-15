@@ -18,8 +18,8 @@ def _spawn(scenario: str, tmp_path):
     env = dict(
         os.environ,
         SCENARIO=scenario,
-        SCIASSIST_WORKSPACE=str(tmp_path / "ws"),
-        SCIASSIST_DB=str(tmp_path / "db" / "chats.sqlite"),
+        FOREST_WORKSPACE=str(tmp_path / "ws"),
+        FOREST_DB=str(tmp_path / "db" / "chats.sqlite"),
         TERM="xterm-256color",
         PROMPT_TOOLKIT_NO_CPR="1",
     )
@@ -49,7 +49,7 @@ def test_mode_cycling_approval_and_commands(tmp_path):
     child.send("/cost\r")
     child.expect("Current context")
     child.send("/exit\r")
-    child.expect("Resume this chat with: sciassist --resume")
+    child.expect("Resume this chat with: forest --resume")
     child.expect(pexpect.EOF)
 
 

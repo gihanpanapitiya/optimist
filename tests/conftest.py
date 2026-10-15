@@ -35,14 +35,14 @@ def ai(text: str = "", *calls: dict, tokens: tuple[int, int] = (100, 10)) -> AIM
 @pytest.fixture(autouse=True)
 def isolated(tmp_path, monkeypatch):
     """Point the workspace and chat database at a temp dir for every test."""
-    from sciassist.config import get_settings
+    from forest.config import get_settings
 
     workspace = tmp_path / "workspace"
-    monkeypatch.setenv("SCIASSIST_WORKSPACE", str(workspace))
-    monkeypatch.setenv("SCIASSIST_DB", str(tmp_path / "data" / "chats.sqlite"))
-    monkeypatch.setenv("SCIASSIST_MODEL", "openai:gpt-5.4")
-    monkeypatch.delenv("SCIASSIST_SUBAGENT_MODEL", raising=False)
-    monkeypatch.delenv("SCIASSIST_AUTO_APPROVE", raising=False)
+    monkeypatch.setenv("FOREST_WORKSPACE", str(workspace))
+    monkeypatch.setenv("FOREST_DB", str(tmp_path / "data" / "chats.sqlite"))
+    monkeypatch.setenv("FOREST_MODEL", "openai:gpt-5.4")
+    monkeypatch.delenv("FOREST_SUBAGENT_MODEL", raising=False)
+    monkeypatch.delenv("FOREST_AUTO_APPROVE", raising=False)
     get_settings.cache_clear()
     yield get_settings().workspace
     get_settings.cache_clear()
@@ -55,7 +55,7 @@ def script(monkeypatch):
     Call the fixture with the main agent's replies (and optionally the
     subagents' replies).
     """
-    import sciassist.cli.session as session_mod
+    import forest.cli.session as session_mod
 
     real_build = session_mod.build_assistant
 

@@ -1,8 +1,8 @@
-"""Literature tools, backed by the ``litresearch`` package.
+"""Literature tools, backed by the ``forestresearch`` package.
 
 Two speeds on purpose. ``search_literature`` is one round of retrieval and
 returns in seconds, which is what iterative brainstorming needs: check an idea,
-think, check again. ``deep_literature_research`` runs the whole litresearch
+think, check again. ``deep_literature_research`` runs the whole forestresearch
 graph (plan, search, snowball, read, synthesize, critique) and takes minutes.
 
 Deep research is a *tool* rather than a subagent because it is already a
@@ -27,7 +27,7 @@ from .files import to_agent_path
 
 logger = logging.getLogger(__name__)
 
-# Deep research runs are expensive, and litresearch closes its shared HTTP
+# Deep research runs are expensive, and forestresearch closes its shared HTTP
 # client when a run ends -- so two concurrent runs would also step on each
 # other. One at a time.
 _deep_research_lock = asyncio.Lock()
@@ -72,9 +72,9 @@ async def search_literature(
     counts and abstracts. Use for quick checks and targeted lookups; use
     deep_literature_research for a full, cited survey.
     """
-    from litresearch.sources.registry import active_sources
-    from litresearch.state import QueryPlan
-    from litresearch.store.canonicalize import Canonicalizer
+    from forestresearch.sources.registry import active_sources
+    from forestresearch.state import QueryPlan
+    from forestresearch.store.canonicalize import Canonicalizer
 
     available = active_sources()
     chosen = {
@@ -156,7 +156,7 @@ async def deep_literature_research(
     and writes a cited report. Returns run statistics, the start of the report,
     and paths to the full report and evidence files (read them with read_file).
     """
-    from litresearch.runner import run_research, summarize_run
+    from forestresearch.runner import run_research, summarize_run
 
     out_dir = str(get_settings().literature_dir)
     seen_log = 0
