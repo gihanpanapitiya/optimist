@@ -112,7 +112,7 @@ class Repl:
             else:
                 await self.send(text)
         self.console.print(
-            Text(f"Resume this chat with: forest --resume {self.session.thread_id}", style="dim")
+            Text(f"Resume this chat with: optimist --resume {self.session.thread_id}", style="dim")
         )
 
     async def send(self, text: str, *, title: str | None = None) -> None:
@@ -234,7 +234,7 @@ class Repl:
     def _banner(self) -> None:
         settings = get_settings()
         body = Text.assemble(
-            ("forest", "bold cyan"),
+            ("optimist", "bold cyan"),
             ("  science assistant\n\n", "dim"),
             ("model      ", "dim"), (self.session.model, ""), "\n",
             ("workspace  ", "dim"), (str(settings.workspace), ""), "\n",

@@ -780,7 +780,7 @@ function iconButton(title, path, onClick) {
   return b;
 }
 
-/* forestresearch cites documents as [doc_0014]; link those to the paper's notes. */
+/* optimistresearch cites documents as [doc_0014]; link those to the paper's notes. */
 function linkCitations(root, filePath) {
   const parts = filePath.split("/");
   let corpus = null;

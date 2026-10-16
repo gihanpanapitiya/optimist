@@ -1,11 +1,11 @@
 [project]
-name = "forest"
+name = "optimist"
 version = "0.1.0"
 description = "An AI science assistant: a deepagents agent with literature, file and shell tools"
 requires-python = ">=3.11"
 dependencies = [
     "deepagents",
-    "forestresearch",
+    "optimistresearch",
     "langgraph>=1.0",
     "langgraph-checkpoint-sqlite>=2.0",
     "langchain>=1.0",
@@ -18,24 +18,24 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-anthropic = ["langchain-anthropic>=1.0", "forestresearch[anthropic]"]
-openai = ["langchain-openai>=1.0", "forestresearch[openai]"]
+anthropic = ["langchain-anthropic>=1.0", "optimistresearch[anthropic]"]
+openai = ["langchain-openai>=1.0", "optimistresearch[openai]"]
 ui = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8", "pexpect>=4.9"]
 
 [project.scripts]
-forest = "forest.cli:app"
+optimist = "optimist.cli:app"
 
 [tool.uv.sources]
 deepagents = { path = "../deepagents/libs/deepagents", editable = true }
-forestresearch = { path = "../literature", editable = true }
+optimistresearch = { path = "../literature", editable = true }
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["forest"]
+packages = ["optimist"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,14 +1,14 @@
 """Settings for the assistant.
 
 Deliberately small. The deep-research pipeline keeps its own configuration in
-``literature/forestresearch.yaml``; this file only covers the conversational
+``literature/optimistresearch.yaml``; this file only covers the conversational
 agent around it.
 
-    FOREST_MODEL            main agent model, "provider:model"
-    FOREST_SUBAGENT_MODEL   model for spawned subagents (default: main model)
-    FOREST_WORKSPACE        where research artifacts are written and read
-    FOREST_DB               SQLite file holding chat history (checkpoints)
-    FOREST_AUTO_APPROVE     "1" runs shell commands and deletions without asking
+    OPTIMIST_MODEL            main agent model, "provider:model"
+    OPTIMIST_SUBAGENT_MODEL   model for spawned subagents (default: main model)
+    OPTIMIST_WORKSPACE        where research artifacts are written and read
+    OPTIMIST_DB               SQLite file holding chat history (checkpoints)
+    OPTIMIST_AUTO_APPROVE     "1" runs shell commands and deletions without asking
 """
 
 from __future__ import annotations
@@ -40,22 +40,22 @@ class Settings:
 
 @cache
 def get_settings() -> Settings:
-    # Our own .env first, then forestresearch's, so API keys only need to be set
+    # Our own .env first, then optimistresearch's, so API keys only need to be set
     # once. load_dotenv never overrides a variable that is already set.
     load_dotenv(PROJECT_ROOT / ".env")
     load_dotenv(LITERATURE_ROOT / ".env")
 
-    model = os.environ.get("FOREST_MODEL", "openai:gpt-5.4")
-    workspace = Path(os.environ.get("FOREST_WORKSPACE", PROJECT_ROOT / "workspace"))
+    model = os.environ.get("OPTIMIST_MODEL", "openai:gpt-5.4")
+    workspace = Path(os.environ.get("OPTIMIST_WORKSPACE", PROJECT_ROOT / "workspace"))
     workspace.mkdir(parents=True, exist_ok=True)
     # Outside the workspace on purpose: the workspace is what the agent and the
     # UI's file browser see, and the chat database is neither's business.
-    db_path = Path(os.environ.get("FOREST_DB", PROJECT_ROOT / "data" / "chats.sqlite"))
+    db_path = Path(os.environ.get("OPTIMIST_DB", PROJECT_ROOT / "data" / "chats.sqlite"))
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return Settings(
         model=model,
-        subagent_model=os.environ.get("FOREST_SUBAGENT_MODEL", model),
+        subagent_model=os.environ.get("OPTIMIST_SUBAGENT_MODEL", model),
         workspace=workspace.resolve(),
         db_path=db_path.resolve(),
-        auto_approve=os.environ.get("FOREST_AUTO_APPROVE", "").lower() in {"1", "true", "yes"},
+        auto_approve=os.environ.get("OPTIMIST_AUTO_APPROVE", "").lower() in {"1", "true", "yes"},
     )

@@ -1,10 +1,10 @@
 """Command line.
 
-forest                          interactive session
-forest --resume [id]            continue a conversation (picker without id)
-forest -p "question"            one turn, non-interactive; answer on stdout
-cat data.csv | forest -p "..."  stdin is appended to the prompt
-forest ui                       web UI
+optimist                          interactive session
+optimist --resume [id]            continue a conversation (picker without id)
+optimist -p "question"            one turn, non-interactive; answer on stdout
+cat data.csv | optimist -p "..."  stdin is appended to the prompt
+optimist ui                       web UI
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def main(
     if ctx.invoked_subcommand is not None:
         return
     if model:
-        os.environ["FOREST_MODEL"] = model
+        os.environ["OPTIMIST_MODEL"] = model
     if mode is not None and mode not in MODES:
         raise typer.BadParameter(f"choose one of {', '.join(MODES)}", param_hint="--mode")
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
@@ -64,9 +64,9 @@ def chat(
     thread: str = typer.Option(None, "--thread", "-t", help="Resume a conversation by id."),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
-    """Interactive session (same as running forest with no command)."""
+    """Interactive session (same as running optimist with no command)."""
     if model:
-        os.environ["FOREST_MODEL"] = model
+        os.environ["OPTIMIST_MODEL"] = model
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     asyncio.run(_interactive(None, thread, verbose))
 
@@ -82,15 +82,15 @@ def ui(
     import uvicorn
 
     if model:
-        os.environ["FOREST_MODEL"] = model
+        os.environ["OPTIMIST_MODEL"] = model
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     Console().print(f"[bold]Science assistant UI[/] → http://{host}:{port}")
-    uvicorn.run("forest.server:app", host=host, port=port, reload=reload, log_level="warning")
+    uvicorn.run("optimist.server:app", host=host, port=port, reload=reload, log_level="warning")
 
 
 @asynccontextmanager
 async def _session(console: Console, mode: str | None, resume: str | None, verbose: bool):
-    from forestresearch.sources.base import close_http_client
+    from optimistresearch.sources.base import close_http_client
 
     from ..agent import open_checkpointer
     from ..config import get_settings

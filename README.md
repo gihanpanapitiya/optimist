@@ -1,4 +1,4 @@
-# FOREST
+# OPTIMIST
 
 An AI science assistant that can also write and run code: a deepagents
 agent with literature tools, file and shell tools, and subagents. Design
@@ -8,8 +8,8 @@ notes: [`../requirement.md`](../requirement.md),
 ```bash
 uv venv .venv && uv pip install -e '.[openai,anthropic,ui,dev]'
 cp .env.example .env          # API keys are also read from ../literature/.env
-.venv/bin/forest           # terminal session
-.venv/bin/forest ui        # web UI at http://127.0.0.1:8000
+.venv/bin/optimist           # terminal session
+.venv/bin/optimist ui        # web UI at http://127.0.0.1:8000
 langgraph dev                 # LangGraph Studio, via langgraph.json
 .venv/bin/pytest              # tests (scripted model, no API calls)
 ```
@@ -19,12 +19,12 @@ langgraph dev                 # LangGraph Studio, via langgraph.json
 Modelled on Claude Code and Codex.
 
 ```bash
-forest                               # interactive session
-forest --resume last                 # continue the latest conversation
-forest -m anthropic:claude-opus-5-5  # pick the model
-forest --mode auto                   # approval mode: ask | edits | auto
-forest -p "fit a line to @data.csv"  # one turn, answer on stdout
-cat log.txt | forest -p "why did this fail?" --json
+optimist                               # interactive session
+optimist --resume last                 # continue the latest conversation
+optimist -m anthropic:claude-opus-5-5  # pick the model
+optimist --mode auto                   # approval mode: ask | edits | auto
+optimist -p "fit a line to @data.csv"  # one turn, answer on stdout
+cat log.txt | optimist -p "why did this fail?" --json
 ```
 
 Text streams as the model writes it, with a spinner showing what's running.
@@ -67,16 +67,16 @@ calls show as expandable cards with live progress. Workspace paths in chat
 and `[doc_0014]` citations in reports open in the viewer, and the open file
 reloads as deep research rewrites it. Panes are resizable.
 
-`forest/server.py` is the FastAPI backend (SSE chat stream, history, file
-API confined to the workspace); `forest/static/` is a no-build frontend.
+`optimist/server.py` is the FastAPI backend (SSE chat stream, history, file
+API confined to the workspace); `optimist/static/` is a no-build frontend.
 `/?thread=<id>#file=<path>` deep-links a conversation and a file.
 
-Chats are checkpointed to SQLite (`data/chats.sqlite`, or `FOREST_DB`), so
+Chats are checkpointed to SQLite (`data/chats.sqlite`, or `OPTIMIST_DB`), so
 they survive restarts. The sidebar lists them by last activity, with search,
 rename and delete; a `threads` table in the same file holds titles and times
-(`forest/threads.py`). Switching chats doesn't stop a run: it continues in
+(`optimist/threads.py`). Switching chats doesn't stop a run: it continues in
 the background, marked with a pulsing dot. The web UI and the terminal share
-the database: `forest chat --thread <id>` resumes any conversation.
+the database: `optimist chat --thread <id>` resumes any conversation.
 
 ## Architecture
 
@@ -85,9 +85,9 @@ The agent is built with [deepagents](../deepagents/libs/deepagents)
 package adds the literature tools, the prompts, the subagents and the UI.
 
 ```
-main agent (forest/agent.py)
+main agent (optimist/agent.py)
 ├── search_literature          quick multi-source search (seconds)
-├── deep_literature_research   full forestresearch graph (minutes) → /literature/<slug>/
+├── deep_literature_research   full optimistresearch graph (minutes) → /literature/<slug>/
 ├── ls / read_file / write_file / edit_file / delete / glob / grep    (deepagents)
 ├── execute                    shell command in the workspace          (deepagents)
 └── task(description, subagent_type)   spawn a subagent; several calls in one turn run in parallel
@@ -110,10 +110,10 @@ though: a command can still reach the rest of the machine as your user.
 approval. The terminal pauses on every file change too, and its approval
 mode decides which pauses need asking (see [Terminal](#terminal)). A
 rejection can carry a reason, which the agent sees.
-`FOREST_AUTO_APPROVE=1` turns approval off in the web UI and starts the
+`OPTIMIST_AUTO_APPROVE=1` turns approval off in the web UI and starts the
 terminal in `auto` mode.
 
-Deep research is a **tool**, not a subagent: forestresearch already has its own
+Deep research is a **tool**, not a subagent: optimistresearch already has its own
 planner and critic, so another LLM loop around it would add cost but no
 judgement. It returns a summary and file paths, and the agent reads what it
 needs.
@@ -122,13 +122,13 @@ needs.
 | --- | --- |
 | `agent.py` | `create_deep_agent` assembly, workspace backend, approval rules; `make_graph` for `langgraph.json` |
 | `subagents.py` | Subagent specs (`general-purpose`, `coder`) |
-| `tools/literature.py` | Wrappers over `forestresearch` |
+| `tools/literature.py` | Wrappers over `optimistresearch` |
 | `tools/files.py` | Workspace path mapping for the UI and tool output |
 | `prompts.py` | System prompts |
 | `server.py`, `static/` | Web UI |
 | `threads.py` | Conversation index for the chat list |
 | `shell.py` | Workspace shell that kills commands when a run is cancelled |
 | `cli/` | Terminal: `repl.py` (input, commands), `session.py` (running turns), `render.py`, `approvals.py`, `usage.py` |
-| `config.py` | `FOREST_MODEL`, `FOREST_SUBAGENT_MODEL`, `FOREST_WORKSPACE`, `FOREST_DB`, `FOREST_AUTO_APPROVE` |
+| `config.py` | `OPTIMIST_MODEL`, `OPTIMIST_SUBAGENT_MODEL`, `OPTIMIST_WORKSPACE`, `OPTIMIST_DB`, `OPTIMIST_AUTO_APPROVE` |
 
-Deep-research budgets and models stay in `../literature/forestresearch.yaml`.
+Deep-research budgets and models stay in `../literature/optimistresearch.yaml`.

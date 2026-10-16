@@ -30,7 +30,7 @@ SHELL_TIMEOUT_SECONDS = 300
 # out of the agent's environment.
 SHELL_ENV_VARS = ("PATH", "HOME", "USER", "LANG", "LC_ALL", "TMPDIR", "TERM", "SHELL")
 
-# Tools that pause for the user's approval unless FOREST_AUTO_APPROVE is
+# Tools that pause for the user's approval unless OPTIMIST_AUTO_APPROVE is
 # set. Writes and edits are confined to the workspace; a shell command is not,
 # since root_dir only sets its working directory.
 APPROVAL_REQUIRED = ("execute", "delete")
@@ -68,7 +68,7 @@ def build_assistant(
     Pass a checkpointer to keep conversation history across turns (see
     :func:`persistent_assistant`); ``langgraph dev`` supplies its own.
     ``approval_tools`` overrides which tools pause for approval; by default
-    that is ``APPROVAL_REQUIRED``, or nothing with FOREST_AUTO_APPROVE.
+    that is ``APPROVAL_REQUIRED``, or nothing with OPTIMIST_AUTO_APPROVE.
     """
     settings = get_settings()
     model = model or settings.model

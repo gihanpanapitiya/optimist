@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from forest.agent import make_backend
+from optimist.agent import make_backend
 
 
 async def test_output_stderr_and_exit_code(isolated):

@@ -1,6 +1,6 @@
 """Web UI backend.
 
-    forest ui                # http://127.0.0.1:8000
+    optimist ui                # http://127.0.0.1:8000
 
 The chat endpoint streams the agent run as server-sent events, one JSON object
 per event:
@@ -64,7 +64,7 @@ _active_threads: set[str] = set()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global _graph, _threads
-    from forestresearch.sources.base import close_http_client
+    from optimistresearch.sources.base import close_http_client
 
     async with persistent_assistant() as graph:
         _graph = graph
@@ -81,7 +81,7 @@ async def lifespan(_app: FastAPI):
             await close_http_client()
 
 
-app = FastAPI(title="forest", lifespan=lifespan)
+app = FastAPI(title="optimist", lifespan=lifespan)
 
 
 # --------------------------------------------------------------------------
