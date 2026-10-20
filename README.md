@@ -1,26 +1,26 @@
 # OPTIMIST
 
 An AI science assistant that can also write and run code: a deepagents
-agent with literature tools, file and shell tools, and subagents. Design
-notes: [`../requirement.md`](../requirement.md),
-[`../capability_taxonomy.md`](../capability_taxonomy.md).
+agent with literature tools, file and shell tools, and subagents.
 
 ```bash
 uv venv .venv && uv pip install -e '.[openai,anthropic,ui,dev]'   # pulls optimistresearch from GitHub
 cp .env.example .env          # API keys
 .venv/bin/optimist           # terminal session
 .venv/bin/optimist ui        # web UI at http://127.0.0.1:8000
-langgraph dev                 # LangGraph Studio, via langgraph.json
+.venv/bin/langgraph dev       # LangGraph Studio, via langgraph.json
 .venv/bin/pytest              # tests (scripted model, no API calls)
 ```
 
 ## Terminal
 
-Modelled on Claude Code and Codex.
+Modelled on Claude Code and Codex. The examples assume the venv is active
+(`source .venv/bin/activate`).
 
 ```bash
 optimist                               # interactive session
 optimist --resume last                 # continue the latest conversation
+optimist --resume <id>                 # or any conversation, by id or its first characters
 optimist -m anthropic:claude-opus-5-5  # pick the model
 optimist --mode auto                   # approval mode: ask | edits | auto
 optimist -p "fit a line to @data.csv"  # one turn, answer on stdout
@@ -39,6 +39,7 @@ come from `genai-prices`.
 | Esc Enter, Ctrl-J, `\` Enter | new line |
 | Shift+Tab | cycle approval mode |
 | Esc, Ctrl-C | interrupt the agent; a running shell command is killed |
+| Ctrl-C twice at an empty prompt | quit |
 | `@path` | attach a workspace file (Tab completes) |
 
 **Approval modes.** `ask` confirms every file change and shell command.
@@ -48,9 +49,9 @@ commands and deletions. `auto` asks for nothing. At a prompt, answer `y`,
 the agent should do instead. Headless runs can't ask, so anything that would
 need a person is rejected, with a reason the agent sees.
 
-**Commands.** `/help`, `/new`, `/resume`, `/model`, `/mode`, `/compact`
-(summarize older messages to free context), `/cost`, `/init` (write
-`/AGENTS.md`), `/verbose`, `/exit`.
+**Commands.** `/help`, `/new` (or `/clear`), `/resume`, `/model`, `/mode`,
+`/compact` (summarize older messages to free context), `/cost`, `/init`
+(write `AGENTS.md` at the workspace root), `/verbose`, `/exit` (or `/quit`).
 
 **Project instructions.** `AGENTS.md` at the workspace root is loaded into the
 system prompt on every turn, in the terminal and the web UI. `/init` drafts
@@ -76,7 +77,7 @@ they survive restarts. The sidebar lists them by last activity, with search,
 rename and delete; a `threads` table in the same file holds titles and times
 (`optimist/threads.py`). Switching chats doesn't stop a run: it continues in
 the background, marked with a pulsing dot. The web UI and the terminal share
-the database: `optimist chat --thread <id>` resumes any conversation.
+the database: `optimist --resume <id>` resumes any conversation.
 
 ## Architecture
 
@@ -131,9 +132,9 @@ needs.
 | `cli/` | Terminal: `repl.py` (input, commands), `session.py` (running turns), `render.py`, `approvals.py`, `usage.py` |
 | `config.py` | `OPTIMIST_MODEL`, `OPTIMIST_SUBAGENT_MODEL`, `OPTIMIST_WORKSPACE`, `OPTIMIST_DB`, `OPTIMIST_AUTO_APPROVE` |
 
-Deep-research budgets and models are optimistresearch's own config: an
-`optimistresearch.yaml` in this directory (or any parent of where you run
-`optimist`), or the file named by `OPTIMISTRESEARCH_CONFIG_FILE`.
+Deep-research budgets and models are optimistresearch's own config: the
+nearest `optimistresearch.yaml` in the directory you run `optimist` from or
+one of its parents, or the file named by `OPTIMISTRESEARCH_CONFIG_FILE`.
 
 optimistresearch is an ordinary dependency, installed from
 [its repository](https://github.com/gihanpanapitiya/optimist_research). To work
