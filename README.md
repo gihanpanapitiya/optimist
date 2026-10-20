@@ -6,8 +6,8 @@ notes: [`../requirement.md`](../requirement.md),
 [`../capability_taxonomy.md`](../capability_taxonomy.md).
 
 ```bash
-uv venv .venv && uv pip install -e '.[openai,anthropic,ui,dev]'
-cp .env.example .env          # API keys are also read from ../literature/.env
+uv venv .venv && uv pip install -e '.[openai,anthropic,ui,dev]'   # pulls optimistresearch from GitHub
+cp .env.example .env          # API keys
 .venv/bin/optimist           # terminal session
 .venv/bin/optimist ui        # web UI at http://127.0.0.1:8000
 langgraph dev                 # LangGraph Studio, via langgraph.json
@@ -80,7 +80,7 @@ the database: `optimist chat --thread <id>` resumes any conversation.
 
 ## Architecture
 
-The agent is built with [deepagents](../deepagents/libs/deepagents)
+The agent is built with [deepagents](https://github.com/langchain-ai/deepagents)
 (`create_deep_agent`). deepagents supplies the loop and the harness; this
 package adds the literature tools, the prompts, the subagents and the UI.
 
@@ -131,4 +131,11 @@ needs.
 | `cli/` | Terminal: `repl.py` (input, commands), `session.py` (running turns), `render.py`, `approvals.py`, `usage.py` |
 | `config.py` | `OPTIMIST_MODEL`, `OPTIMIST_SUBAGENT_MODEL`, `OPTIMIST_WORKSPACE`, `OPTIMIST_DB`, `OPTIMIST_AUTO_APPROVE` |
 
-Deep-research budgets and models stay in `../literature/optimistresearch.yaml`.
+Deep-research budgets and models are optimistresearch's own config: an
+`optimistresearch.yaml` in this directory (or any parent of where you run
+`optimist`), or the file named by `OPTIMISTRESEARCH_CONFIG_FILE`.
+
+optimistresearch is an ordinary dependency, installed from
+[its repository](https://github.com/gihanpanapitiya/optimist_research). To work
+on both at once, install a local checkout over it:
+`uv pip install -e /path/to/optimist_research`.

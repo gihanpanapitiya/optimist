@@ -23,6 +23,9 @@ def _spawn(scenario: str, tmp_path):
         TERM="xterm-256color",
         PROMPT_TOOLKIT_NO_CPR="1",
     )
+    # The scripted model never calls out, but subagent models are still built
+    # at startup and refuse to construct without a key.
+    env.setdefault("OPENAI_API_KEY", "test")
     child = pexpect.spawn(
         sys.executable, ["-m", "tests.fake_cli"], cwd=str(ROOT), env=env,
         encoding="utf-8", dimensions=(40, 120), timeout=20,

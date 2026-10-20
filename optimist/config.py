@@ -1,8 +1,9 @@
 """Settings for the assistant.
 
-Deliberately small. The deep-research pipeline keeps its own configuration in
-``literature/optimistresearch.yaml``; this file only covers the conversational
-agent around it.
+Deliberately small. The deep-research pipeline (the ``optimistresearch``
+package) keeps its own configuration in an ``optimistresearch.yaml`` it finds
+by walking up from the working directory, or at ``OPTIMISTRESEARCH_CONFIG_FILE``;
+this file only covers the conversational agent around it.
 
     OPTIMIST_MODEL            main agent model, "provider:model"
     OPTIMIST_SUBAGENT_MODEL   model for spawned subagents (default: main model)
@@ -21,7 +22,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-LITERATURE_ROOT = PROJECT_ROOT.parent / "literature"
 
 
 @dataclass(frozen=True)
@@ -40,10 +40,9 @@ class Settings:
 
 @cache
 def get_settings() -> Settings:
-    # Our own .env first, then optimistresearch's, so API keys only need to be set
-    # once. load_dotenv never overrides a variable that is already set.
+    # load_dotenv never overrides a variable that is already set. API keys land in
+    # os.environ here, which is also where optimistresearch's model clients look.
     load_dotenv(PROJECT_ROOT / ".env")
-    load_dotenv(LITERATURE_ROOT / ".env")
 
     model = os.environ.get("OPTIMIST_MODEL", "openai:gpt-5.4")
     workspace = Path(os.environ.get("OPTIMIST_WORKSPACE", PROJECT_ROOT / "workspace"))

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "An AI science assistant: a deepagents agent with literature, file and shell tools"
 requires-python = ">=3.11"
 dependencies = [
-    "deepagents",
+    "deepagents>=0.7.24",
     "optimistresearch",
     "langgraph>=1.0",
     "langgraph-checkpoint-sqlite>=2.0",
@@ -27,8 +27,7 @@ dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8", "pexpect>=4.9"]
 optimist = "optimist.cli:app"
 
 [tool.uv.sources]
-deepagents = { path = "../deepagents/libs/deepagents", editable = true }
-optimistresearch = { path = "../literature", editable = true }
+optimistresearch = { git = "https://github.com/gihanpanapitiya/optimist_research.git" }
 
 [build-system]
 requires = ["hatchling"]
